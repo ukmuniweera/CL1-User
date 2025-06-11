@@ -9,4 +9,3 @@ MPI Reduction operations
 	MPI_BOR - Performs a bitwise or across the bits of the elements
 	MPI_MAXLOC-  REturns the maximin value and rank of the process that owns it 
 	MPI_MINLOC - Returnjs the minimum value and the rank of the process that owns it 
-	*/
