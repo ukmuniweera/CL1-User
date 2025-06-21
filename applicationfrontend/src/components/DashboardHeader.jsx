@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   AppBar,
   Toolbar,
@@ -22,6 +22,7 @@ import {
   ListItemText,
   Alert,
   Snackbar,
+  CircularProgress,
 } from "@mui/material";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import ExitToAppRoundedIcon from "@mui/icons-material/ExitToAppRounded";
@@ -31,6 +32,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import PersonIcon from "@mui/icons-material/Person";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
+import axios from "axios";
 
 const DashboardHeader = ({ user, onAddProduct, onLogout, onUserUpdate, onUserDelete }) => {
   const theme = useTheme();
@@ -43,12 +45,13 @@ const DashboardHeader = ({ user, onAddProduct, onLogout, onUserUpdate, onUserDel
   // Dialog states
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
   
   // Form state
   const [editForm, setEditForm] = useState({
-    fname: user.fullName?.split(' ')[0] || '',
-    lname: user.fullName?.split(' ').slice(1).join(' ') || '',
-    uname: user.username || '',
+    fname: '',
+    lname: '',
+    uname: '',
     pno: '',
     address: ''
   });
@@ -66,6 +69,39 @@ const DashboardHeader = ({ user, onAddProduct, onLogout, onUserUpdate, onUserDel
         .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
         .join(" ")
     : "User";
+
+  // Load user profile data when edit dialog opens
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      if (editDialogOpen && user.userId) {
+        try {
+          setLoading(true);
+          const response = await axios.get(`http://localhost:8080/user/profile/${user.userId}`);
+          
+          if (response.data) {
+            setEditForm({
+              fname: response.data.fname || '',
+              lname: response.data.lname || '',
+              uname: response.data.uname || '',
+              pno: response.data.pno || '',
+              address: response.data.address || ''
+            });
+          }
+        } catch (error) {
+          console.error('Error loading user profile:', error);
+          setSnackbar({
+            open: true,
+            message: 'Failed to load user profile',
+            severity: 'error'
+          });
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadUserProfile();
+  }, [editDialogOpen, user.userId]);
 
   const handleMenuClick = (event) => {
     setAnchorEl(event.currentTarget);
@@ -113,16 +149,35 @@ const DashboardHeader = ({ user, onAddProduct, onLogout, onUserUpdate, onUserDel
         return;
       }
 
-      // Call the update function passed from parent
-      const success = await onUserUpdate(user.userId, editForm);
-      
-      if (success) {
+      setLoading(true);
+
+      const response = await axios.put(
+        `http://localhost:8080/user/update/${user.userId}`,
+        editForm,
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (response.status === 200) {
         setEditDialogOpen(false);
         setSnackbar({
           open: true,
           message: 'User details updated successfully',
           severity: 'success'
         });
+
+        // Call the parent update function if provided
+        if (onUserUpdate) {
+          onUserUpdate(user.userId, editForm);
+        }
+
+        // Update local user info
+        const updatedFullName = `${editForm.fname} ${editForm.lname}`.trim();
+        // You might want to update the user context here
+        
       } else {
         setSnackbar({
           open: true,
@@ -131,25 +186,44 @@ const DashboardHeader = ({ user, onAddProduct, onLogout, onUserUpdate, onUserDel
         });
       }
     } catch (error) {
+      console.error('Error updating user:', error);
+      let errorMessage = 'Error updating user details';
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data && typeof error.response.data === 'string') {
+        errorMessage = error.response.data;
+      }
+      
       setSnackbar({
         open: true,
-        message: 'Error updating user details',
+        message: errorMessage,
         severity: 'error'
       });
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleDeleteConfirm = async () => {
     try {
-      const success = await onUserDelete(user.userId);
+      setLoading(true);
+
+      const response = await axios.delete(`http://localhost:8080/user/delete/${user.userId}`);
       
-      if (success) {
+      if (response.status === 200) {
         setDeleteDialogOpen(false);
         setSnackbar({
           open: true,
           message: 'Account deleted successfully',
           severity: 'success'
         });
+        
+        // Call the parent delete function if provided
+        if (onUserDelete) {
+          onUserDelete(user.userId);
+        }
+        
         // Logout after successful deletion
         setTimeout(() => {
           onLogout();
@@ -162,11 +236,22 @@ const DashboardHeader = ({ user, onAddProduct, onLogout, onUserUpdate, onUserDel
         });
       }
     } catch (error) {
+      console.error('Error deleting user:', error);
+      let errorMessage = 'Error deleting account';
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data && typeof error.response.data === 'string') {
+        errorMessage = error.response.data;
+      }
+      
       setSnackbar({
         open: true,
-        message: 'Error deleting account',
+        message: errorMessage,
         severity: 'error'
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -333,53 +418,69 @@ const DashboardHeader = ({ user, onAddProduct, onLogout, onUserUpdate, onUserDel
           </Box>
         </DialogTitle>
         <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
-            <TextField
-              label="First Name"
-              value={editForm.fname}
-              onChange={(e) => handleEditFormChange('fname', e.target.value)}
-              required
-              fullWidth
-            />
-            <TextField
-              label="Last Name"
-              value={editForm.lname}
-              onChange={(e) => handleEditFormChange('lname', e.target.value)}
-              fullWidth
-            />
-            <TextField
-              label="Username"
-              value={editForm.uname}
-              onChange={(e) => handleEditFormChange('uname', e.target.value)}
-              required
-              fullWidth
-            />
-            <TextField
-              label="Phone Number"
-              value={editForm.pno}
-              onChange={(e) => handleEditFormChange('pno', e.target.value)}
-              fullWidth
-            />
-            <TextField
-              label="Address"
-              value={editForm.address}
-              onChange={(e) => handleEditFormChange('address', e.target.value)}
-              multiline
-              rows={2}
-              fullWidth
-            />
-          </Box>
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+              <TextField
+                label="First Name"
+                value={editForm.fname}
+                onChange={(e) => handleEditFormChange('fname', e.target.value)}
+                required
+                fullWidth
+                disabled={loading}
+              />
+              <TextField
+                label="Last Name"
+                value={editForm.lname}
+                onChange={(e) => handleEditFormChange('lname', e.target.value)}
+                fullWidth
+                disabled={loading}
+              />
+              <TextField
+                label="Username"
+                value={editForm.uname}
+                onChange={(e) => handleEditFormChange('uname', e.target.value)}
+                required
+                fullWidth
+                disabled={loading}
+              />
+              <TextField
+                label="Phone Number"
+                value={editForm.pno}
+                onChange={(e) => handleEditFormChange('pno', e.target.value)}
+                fullWidth
+                disabled={loading}
+              />
+              <TextField
+                label="Address"
+                value={editForm.address}
+                onChange={(e) => handleEditFormChange('address', e.target.value)}
+                multiline
+                rows={2}
+                fullWidth
+                disabled={loading}
+              />
+            </Box>
+          )}
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button onClick={() => setEditDialogOpen(false)}>
+          <Button 
+            onClick={() => setEditDialogOpen(false)}
+            disabled={loading}
+          >
             Cancel
           </Button>
           <Button 
             onClick={handleEditSubmit}
             variant="contained"
             sx={{ px: 3 }}
+            disabled={loading}
+            startIcon={loading ? <CircularProgress size={20} /> : null}
           >
-            Save Changes
+            {loading ? 'Saving...' : 'Save Changes'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -402,7 +503,10 @@ const DashboardHeader = ({ user, onAddProduct, onLogout, onUserUpdate, onUserDel
           </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button onClick={() => setDeleteDialogOpen(false)}>
+          <Button 
+            onClick={() => setDeleteDialogOpen(false)}
+            disabled={loading}
+          >
             Cancel
           </Button>
           <Button 
@@ -410,8 +514,10 @@ const DashboardHeader = ({ user, onAddProduct, onLogout, onUserUpdate, onUserDel
             variant="contained"
             color="error"
             sx={{ px: 3 }}
+            disabled={loading}
+            startIcon={loading ? <CircularProgress size={20} /> : null}
           >
-            Delete Account
+            {loading ? 'Deleting...' : 'Delete Account'}
           </Button>
         </DialogActions>
       </Dialog>
