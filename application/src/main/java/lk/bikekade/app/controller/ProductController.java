@@ -27,7 +27,7 @@ public class ProductController {
     @PostMapping("/add")
     public ResponseEntity<?> add(@RequestBody Product product, @RequestParam(required = false) String userId) {
         try {
-            if (userId != null && !userId.trim().isEmpty() && !userId.equals("undefined")) {
+            if (userId != null && !userId.trim().isEmpty() && !userId.equals("undefined") && !userId.equals("null")) {
                 try {
                     int userIdInt = Integer.parseInt(userId);
                     Product savedProduct = productService.saveProduct(product, userIdInt);
@@ -51,7 +51,7 @@ public class ProductController {
     @PostMapping("/user/{username}/add")
     public ResponseEntity<?> addProductForUser(@PathVariable String username, @RequestBody Product product) {
         try {
-            if (username == null || username.trim().isEmpty()) {
+            if (username == null || username.trim().isEmpty() || username.equals("undefined")) {
                 return new ResponseEntity<>("Username cannot be empty", HttpStatus.BAD_REQUEST);
             }
 
@@ -84,12 +84,16 @@ public class ProductController {
     @GetMapping("/user/{userId}")
     public ResponseEntity<?> getProductsByUserId(@PathVariable String userId) {
         try {
-            // Validate user ID format
+            // Validate user ID format and undefined check
+            if (userId == null || userId.trim().isEmpty() || userId.equals("undefined") || userId.equals("null")) {
+                return new ResponseEntity<>("User ID cannot be undefined or empty", HttpStatus.BAD_REQUEST);
+            }
+
             int userIdInt;
             try {
                 userIdInt = Integer.parseInt(userId);
             } catch (NumberFormatException e) {
-                return new ResponseEntity<>("Invalid user ID format", HttpStatus.BAD_REQUEST);
+                return new ResponseEntity<>("Invalid user ID format: " + userId, HttpStatus.BAD_REQUEST);
             }
 
             List<Product> products = productService.getProductsByUserId(userIdInt);
@@ -104,7 +108,7 @@ public class ProductController {
     @GetMapping("/user/name/{username}")
     public ResponseEntity<?> getProductsByUsername(@PathVariable String username) {
         try {
-            if (username == null || username.trim().isEmpty()) {
+            if (username == null || username.trim().isEmpty() || username.equals("undefined")) {
                 return new ResponseEntity<>("Username cannot be empty", HttpStatus.BAD_REQUEST);
             }
 
@@ -120,12 +124,16 @@ public class ProductController {
     @GetMapping("/{id}")
     public ResponseEntity<?> getProductById(@PathVariable String id) {
         try {
-            // Validate product ID format
+            // Validate product ID format and undefined check
+            if (id == null || id.trim().isEmpty() || id.equals("undefined") || id.equals("null")) {
+                return new ResponseEntity<>("Product ID cannot be undefined or empty", HttpStatus.BAD_REQUEST);
+            }
+
             int productId;
             try {
                 productId = Integer.parseInt(id);
             } catch (NumberFormatException e) {
-                return new ResponseEntity<>("Invalid product ID format", HttpStatus.BAD_REQUEST);
+                return new ResponseEntity<>("Invalid product ID format: " + id, HttpStatus.BAD_REQUEST);
             }
 
             Product product = productService.getProductById(productId)
@@ -147,23 +155,27 @@ public class ProductController {
             @RequestParam(required = false) String userId) {
 
         try {
-            // Validate product ID format
+            // Validate product ID format and undefined check
+            if (id == null || id.trim().isEmpty() || id.equals("undefined") || id.equals("null")) {
+                return new ResponseEntity<>("Product ID cannot be undefined or empty", HttpStatus.BAD_REQUEST);
+            }
+
             int productId;
             try {
                 productId = Integer.parseInt(id);
             } catch (NumberFormatException e) {
-                return new ResponseEntity<>("Invalid product ID format", HttpStatus.BAD_REQUEST);
+                return new ResponseEntity<>("Invalid product ID format: " + id, HttpStatus.BAD_REQUEST);
             }
 
             // Validate user ID if provided
-            if (userId != null && !userId.trim().isEmpty() && !userId.equals("undefined")) {
+            if (userId != null && !userId.trim().isEmpty() && !userId.equals("undefined") && !userId.equals("null")) {
                 try {
                     int userIdInt = Integer.parseInt(userId);
                     if (!productService.userOwnsProduct(userIdInt, productId)) {
                         return new ResponseEntity<>("User does not own this product", HttpStatus.FORBIDDEN);
                     }
                 } catch (NumberFormatException e) {
-                    return new ResponseEntity<>("Invalid user ID format", HttpStatus.BAD_REQUEST);
+                    return new ResponseEntity<>("Invalid user ID format: " + userId, HttpStatus.BAD_REQUEST);
                 }
             }
 
@@ -186,23 +198,27 @@ public class ProductController {
             @RequestParam(required = false) String userId) {
 
         try {
-            // Validate product ID format
+            // Validate product ID format and undefined check
+            if (id == null || id.trim().isEmpty() || id.equals("undefined") || id.equals("null")) {
+                return new ResponseEntity<>("Product ID cannot be undefined or empty", HttpStatus.BAD_REQUEST);
+            }
+
             int productId;
             try {
                 productId = Integer.parseInt(id);
             } catch (NumberFormatException e) {
-                return new ResponseEntity<>("Invalid product ID format", HttpStatus.BAD_REQUEST);
+                return new ResponseEntity<>("Invalid product ID format: " + id, HttpStatus.BAD_REQUEST);
             }
 
             // Validate user ID if provided
-            if (userId != null && !userId.trim().isEmpty() && !userId.equals("undefined")) {
+            if (userId != null && !userId.trim().isEmpty() && !userId.equals("undefined") && !userId.equals("null")) {
                 try {
                     int userIdInt = Integer.parseInt(userId);
                     if (!productService.userOwnsProduct(userIdInt, productId)) {
                         return new ResponseEntity<>("User does not own this product", HttpStatus.FORBIDDEN);
                     }
                 } catch (NumberFormatException e) {
-                    return new ResponseEntity<>("Invalid user ID format", HttpStatus.BAD_REQUEST);
+                    return new ResponseEntity<>("Invalid user ID format: " + userId, HttpStatus.BAD_REQUEST);
                 }
             }
 
@@ -220,6 +236,11 @@ public class ProductController {
     @GetMapping("/ownership/{productId}/{userId}")
     public ResponseEntity<?> checkOwnership(@PathVariable String productId, @PathVariable String userId) {
         try {
+            // Validate both IDs
+            if (productId == null || productId.equals("undefined") || userId == null || userId.equals("undefined")) {
+                return new ResponseEntity<>("IDs cannot be undefined", HttpStatus.BAD_REQUEST);
+            }
+
             int productIdInt = Integer.parseInt(productId);
             int userIdInt = Integer.parseInt(userId);
             

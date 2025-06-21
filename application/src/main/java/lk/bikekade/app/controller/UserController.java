@@ -45,12 +45,16 @@ public class UserController {
     @GetMapping("/{id}")
     public ResponseEntity<?> getUserById(@PathVariable String id) {
         try {
-            // Validate ID format
+            // Validate ID format and undefined check
+            if (id == null || id.trim().isEmpty() || id.equals("undefined") || id.equals("null")) {
+                return new ResponseEntity<>("User ID cannot be undefined or empty", HttpStatus.BAD_REQUEST);
+            }
+
             int userId;
             try {
                 userId = Integer.parseInt(id);
             } catch (NumberFormatException e) {
-                return new ResponseEntity<>("Invalid user ID format", HttpStatus.BAD_REQUEST);
+                return new ResponseEntity<>("Invalid user ID format: " + id, HttpStatus.BAD_REQUEST);
             }
 
             User user = userService.getUserById(userId)
@@ -68,7 +72,11 @@ public class UserController {
     @GetMapping("/name/{username}")
     public ResponseEntity<?> getUserByUsername(@PathVariable String username) {
         try {
-            Optional<User> user = userService.getUserByUsername(username);
+            if (username == null || username.trim().isEmpty() || username.equals("undefined")) {
+                return new ResponseEntity<>("Username cannot be undefined or empty", HttpStatus.BAD_REQUEST);
+            }
+
+            Optional<User> user = userService.getUserByUsername(username.trim());
             if (user.isPresent()) {
                 return new ResponseEntity<>(user.get(), HttpStatus.OK);
             } else {
@@ -85,12 +93,16 @@ public class UserController {
     @PutMapping("/update/{id}")
     public ResponseEntity<?> updateUser(@PathVariable String id, @RequestBody User user) {
         try {
-            // Validate ID format
+            // Validate ID format and undefined check
+            if (id == null || id.trim().isEmpty() || id.equals("undefined") || id.equals("null")) {
+                return new ResponseEntity<>("User ID cannot be undefined or empty", HttpStatus.BAD_REQUEST);
+            }
+
             int userId;
             try {
                 userId = Integer.parseInt(id);
             } catch (NumberFormatException e) {
-                return new ResponseEntity<>("Invalid user ID format", HttpStatus.BAD_REQUEST);
+                return new ResponseEntity<>("Invalid user ID format: " + id, HttpStatus.BAD_REQUEST);
             }
 
             User updatedUser = userService.updateUser(userId, user);
@@ -109,14 +121,21 @@ public class UserController {
     @DeleteMapping("/delete/{id}")
     public ResponseEntity<?> deleteUser(@PathVariable String id) {
         try {
-            // Validate ID format
+            // Validate ID format and undefined check
+            if (id == null || id.trim().isEmpty() || id.equals("undefined") || id.equals("null")) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "User ID cannot be undefined or empty");
+                return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+            }
+
             int userId;
             try {
                 userId = Integer.parseInt(id);
             } catch (NumberFormatException e) {
                 Map<String, Object> response = new HashMap<>();
                 response.put("success", false);
-                response.put("message", "Invalid user ID format");
+                response.put("message", "Invalid user ID format: " + id);
                 return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
             }
 
@@ -191,7 +210,7 @@ public class UserController {
             String identifier = payload.get("identifier");
             String newPassword = payload.get("newPassword");
 
-            if (identifier == null || identifier.trim().isEmpty()) {
+            if (identifier == null || identifier.trim().isEmpty() || identifier.equals("undefined")) {
                 return new ResponseEntity<>("Identifier is required", HttpStatus.BAD_REQUEST);
             }
 
@@ -225,12 +244,16 @@ public class UserController {
     @GetMapping("/profile/{id}")
     public ResponseEntity<?> getUserProfile(@PathVariable String id) {
         try {
-            // Validate ID format
+            // Validate ID format and undefined check
+            if (id == null || id.trim().isEmpty() || id.equals("undefined") || id.equals("null")) {
+                return new ResponseEntity<>("User ID cannot be undefined or empty", HttpStatus.BAD_REQUEST);
+            }
+
             int userId;
             try {
                 userId = Integer.parseInt(id);
             } catch (NumberFormatException e) {
-                return new ResponseEntity<>("Invalid user ID format", HttpStatus.BAD_REQUEST);
+                return new ResponseEntity<>("Invalid user ID format: " + id, HttpStatus.BAD_REQUEST);
             }
 
             User user = userService.getUserById(userId)
@@ -258,6 +281,13 @@ public class UserController {
     @GetMapping("/validate/{id}")
     public ResponseEntity<?> validateUserId(@PathVariable String id) {
         try {
+            if (id == null || id.equals("undefined") || id.equals("null") || id.trim().isEmpty()) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("valid", false);
+                response.put("message", "ID cannot be undefined or empty");
+                return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+            }
+
             int userId = Integer.parseInt(id);
             boolean exists = userService.getUserById(userId).isPresent();
             
@@ -269,7 +299,7 @@ public class UserController {
         } catch (NumberFormatException e) {
             Map<String, Object> response = new HashMap<>();
             response.put("valid", false);
-            response.put("message", "Invalid ID format");
+            response.put("message", "Invalid ID format: " + id);
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
     }
